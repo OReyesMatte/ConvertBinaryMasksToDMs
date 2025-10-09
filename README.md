@@ -1,6 +1,6 @@
-# Convert binary mask to distance matrix
+# Convert binary masks to distance matrices
 Euclidean distance matrices (EDMs) are convenient representations of point sets created by collecting all squared distances between points (see [10.1109/MSP.2015.2398954](https://doi.org/10.1109/MSP.2015.2398954) for more details). 
-In this repository, we illustrate how distance matrices can be extracted from binary segmentation masks.
+In this repository, we illustrate how distance matrices can be extracted from binary segmentation masks and saved for downstream analysis with self-supervised shape analysis methods such as [ShapeEmbed](https://github.com/uhlmanngroup/ShapeEmbed) and [ShapeEmbedLite](https://github.com/uhlmanngroup/ShapeEmbedLite).
 
 ## Getting started
 
