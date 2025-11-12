@@ -424,53 +424,69 @@ def mask2sampledSkel(mask:np.array, n_samples:int=64, resample_sparsity:int=1, c
     """
     
     skel = skeletonize(mask)
-    points = np.squeeze((findNonZero(np.uint8(skel))))
-    points = [tuple(xy) for xy in points]
-
-    ### First, check that the skeleton is not branched or enclosed at one point
-    if count_edges(points,threshold) == 2:
-    
-        resampled = contour_spline_resample(np.array(points),n_samples,per=closed)
+    points = (findNonZero(np.uint8(skel)))
+    if points.shape[0] == 1:
         
-        y,x = resampled[:,0],resampled[:,1]
-    
-        return np.stack([x,y],axis=1)
+        return []
 
-    ### IF closed (edges = 0), simply remove the first point to "open" the skeleton and 
-    
-    ### If branched, compute candidate skeletons from the branched one, keep only the ones that cover at least 75% of the total skeleton
-    else: 
-        #### Compute edges and build graph
-        edges = compute_edges(points=points,threshold=threshold)
-        graph = build_graph(points=points,edges=edges)
-
-        #### Calculate the longest path of the skeleton
-        longest_path = []
-        longest_distance = [0]
-
-        for point in points:
-            visited = set()
-            DFS(graph,point,visited,[],longest_path,longest_distance)            
-
-        paths = PathFinder(path=longest_path,points=points,threshold=threshold)
+    else:
+        points = points.squeeze()
+        points = [tuple(xy) for xy in points]
         
-        newpaths = []
-
-        for p in paths:
-
-            skel_perc = len(p)/len(points)
-
-            if skel_perc >= skeleton_percentage_threshold:
-                newpaths.append(p)
+        ### First, check that the skeleton is not branched or enclosed at one point
+        if count_edges(points,threshold) == 2:
         
-        resampled = [contour_spline_resample(np.array(p),n_samples,per=closed) for p in newpaths]
-
-        resampled_ = []
-
-        for r in resampled:
+            resampled = contour_spline_resample(np.array(points),n_samples,per=closed)
             
-            y,x = r[:,0],r[:,1]
-            resampled_.append(np.stack([x,y],axis=1))
-                
-        return resampled_
+            y,x = resampled[:,0],resampled[:,1]
+        
+            return np.stack([x,y],axis=1)
+    
+        ### IF closed (edges = 0), simply remove the first point to "open" the skeleton and 
+        
+        ### If branched, compute candidate skeletons from the branched one, keep only the ones that cover at least 75% of the total skeleton
+        else: 
+            #### Compute edges and build graph
+            edges = compute_edges(points=points,threshold=threshold)
+            graph = build_graph(points=points,edges=edges)
+    
+            #### Calculate the longest path of the skeleton
+            longest_path = []
+            longest_distance = [0]
+    
+            for point in points:
+                visited = set()
+                DFS(graph,point,visited,[],longest_path,longest_distance)            
+    
+            paths = PathFinder(path=longest_path,points=points,threshold=threshold)
+            
+            newpaths = []
+    
+            for p in paths:
+    
+                skel_perc = len(p)/len(points)
+    
+                if skel_perc >= skeleton_percentage_threshold:
+                    newpaths.append(p)
+            
+            for p in paths:
+    
+                skel_perc = len(p)/len(points)
+            
+                if skel_perc >= 0.75:
+                    newpaths.append(p)
+            
+            resampled_ = []
+            
+            for p in newpaths:
+            
+                try:
+                    resample = contour_spline_resample(np.array(p),n_samples,per=closed)
+                    y,x = resample[:,0],resample[:,1]
+                    resampled_.append(np.stack([x,y],axis=1))
+            
+                except:
+                    pass   
+                    
+            return resampled_
     
