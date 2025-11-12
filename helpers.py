@@ -4,6 +4,10 @@ import zipfile
 import requests
 from pathlib import Path
 import skimage
+from skimage.morphology import skeletonize
+from skimage.measure import regionprops_table
+from scipy.ndimage import binary_fill_holes
+
 import numpy as np
 from scipy.spatial import distance_matrix
 from scipy.interpolate import splprep, splev
@@ -215,7 +219,7 @@ def contour_spline_resample(contour, n_samples, sparsity=1, per=True):
 
 #######################
 
-# The functions euclidean_distance, compute_edges, build_graph, calculate_total_distance, DFS, and PathFinder are copied from the MEDUSSA repository https://github.com/OReyesMatte/MEDUSSA
+# The functions euclidean_distance, compute_edges, build_graph, calculate_total_distance, DFS, PathFinder, and SingleCellLister are copied from the MEDUSSA repository https://github.com/OReyesMatte/MEDUSSA
 
 def euclidean_distance(p1:tuple,p2:tuple)->float:
     """Function to calculate the Euclidean distance between two points in a two-dimensional space
@@ -356,7 +360,26 @@ def PathFinder(path:list,points:list,threshold:float)->list:
 
     return paths
 
+def SingleCellLister(maskList:list) -> list:
+    
+    """From a list that contains instance segmentation images, obtain a list of individual masks
 
+    Args:
+        maskList(list): list of masks. If only one image is called, make sure to pass it as [image] for the function to run properly
+    
+    Returns:
+        AllCells(list): list that contains a binary image of each single cell
+
+    """
+
+    AllCells = []
+
+    for mask in maskList:
+        reg = regionprops_table(mask,properties=['image'])
+        Cells = [np.pad(binary_fill_holes(image),4) for image in reg['image']]
+        AllCells += Cells
+
+    return AllCells
 ##############################
 
 def count_edges(points:np.array,threshold:float=np.sqrt(2))->int:
@@ -406,12 +429,12 @@ def mask2sampledSkel(mask:np.array, n_samples:int=64, resample_sparsity:int=1, c
     coordinates
     """
     
-    skel = skeletonize(img)
-    points = np.squeeze((cv2.findNonZero(np.uint8(skel))))
+    skel = skeletonize(mask)
+    points = np.squeeze((findNonZero(np.uint8(skel))))
     points = np.array([tuple(xy) for xy in points])
 
-    ### First, check that the skeleton is not branched
-    if count_edges(skel,threshold) == 2:
+    ### First, check that the skeleton is not branched or enclosed at one point
+    if count_edges(points,threshold) == 2:
     
         resampled = contour_spline_resample(points,n_samples,per=closed)
         
@@ -419,6 +442,8 @@ def mask2sampledSkel(mask:np.array, n_samples:int=64, resample_sparsity:int=1, c
     
         return np.stack([x,y],axis=1)
 
+    ### IF closed (edges = 0), simply remove the first point to "open" the skeleton and 
+    
     ### If branched, compute candidate skeletons from the branched one, keep only the ones that cover at least 75% of the total skeleton
     else: 
         #### Compute edges and build graph
@@ -439,10 +464,10 @@ def mask2sampledSkel(mask:np.array, n_samples:int=64, resample_sparsity:int=1, c
 
         resampled_ = []
 
-            for r in resampled:
-                
-                y,x = r[:,0],r[:,1]
-                resampled_.append(np.stack([x,y],axis=1))
+        for r in resampled:
+            
+            y,x = r[:,0],r[:,1]
+            resampled_.append(np.stack([x,y],axis=1))
                 
         return resampled_
     
