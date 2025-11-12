@@ -330,7 +330,6 @@ def PathFinder(path:list,points:list,threshold:float)->list:
     """ It can happen that DFS computes multiple possible paths, leaving to wrong measurements. 
     For a candidate longest path, find if, indeed, is it just one path or multiple, as the latter can happen with branched skeletons
     If two successive points in the path are more than one threshold away (typically, the euclidean distance between two diagonal points), the path is assumed to split there into multiple
-    If the path is too short (less than 10 pixels, or less than 0.65 µm of length), it's discarded.
 
     Args:
         path(list): 
@@ -352,12 +351,7 @@ def PathFinder(path:list,points:list,threshold:float)->list:
             subpath = path[j:(i+1)]
             paths.append(subpath)
             j = i+1
-
-    for i,p in enumerate(paths):
-
-        if len(p) < 10:
-            del paths[i]
-
+            
     return paths
 
 def SingleCellLister(maskList:list) -> list:
@@ -403,7 +397,7 @@ def count_edges(points:np.array,threshold:float=np.sqrt(2))->int:
     return n_edges
     
 
-def mask2sampledSkel(mask:np.array, n_samples:int=64, resample_sparsity:int=1, closed:bool=False,threshold=np.sqrt(2)):
+def mask2sampledSkel(mask:np.array, n_samples:int=64, resample_sparsity:int=1, closed:bool=False,threshold=np.sqrt(2),skeleton_percentage_threshold=0.75):
     """
     Return a resampled spline interpolation of the skeleton of a mask
     
@@ -466,7 +460,7 @@ def mask2sampledSkel(mask:np.array, n_samples:int=64, resample_sparsity:int=1, c
 
             skel_perc = len(p)/len(points)
 
-            if skel_perc >= 0.75:
+            if skel_perc >= skeleton_percentage_threshold:
                 newpaths.append(p)
         
         resampled = [contour_spline_resample(np.array(p),n_samples,per=closed) for p in newpaths]
