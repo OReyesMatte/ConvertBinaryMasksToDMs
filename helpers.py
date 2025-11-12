@@ -431,12 +431,12 @@ def mask2sampledSkel(mask:np.array, n_samples:int=64, resample_sparsity:int=1, c
     
     skel = skeletonize(mask)
     points = np.squeeze((findNonZero(np.uint8(skel))))
-    points = np.array([tuple(xy) for xy in points])
+    points = [tuple(xy) for xy in points]
 
     ### First, check that the skeleton is not branched or enclosed at one point
     if count_edges(points,threshold) == 2:
     
-        resampled = contour_spline_resample(points,n_samples,per=closed)
+        resampled = contour_spline_resample(np.array(points),n_samples,per=closed)
         
         y,x = resampled[:,0],resampled[:,1]
     
@@ -459,8 +459,17 @@ def mask2sampledSkel(mask:np.array, n_samples:int=64, resample_sparsity:int=1, c
             DFS(graph,point,visited,[],longest_path,longest_distance)            
 
         paths = PathFinder(path=longest_path,points=points,threshold=threshold)
+        
+        newpaths = []
 
-        resampled = [contour_spline_resample(p,n_samples,per=closed) for p in paths]
+        for p in paths:
+
+            skel_perc = len(p)/len(points)
+
+            if skel_perc >= 0.75:
+                newpaths.append(p)
+        
+        resampled = [contour_spline_resample(np.array(p),n_samples,per=closed) for p in newpaths]
 
         resampled_ = []
 
